@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
-mod utils;
-mod rules;
+extern crate core;
 
-use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+
 use clap::Parser;
+
+mod rules;
+mod org;
 
 enum OrganizeStrategy {
     ByExt,
@@ -67,41 +69,30 @@ impl OrganizeEntry {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    #[arg(short, long)]
-    shell: Option<String>,
+    #[arg(short, long, default_value_t = Args::get_default_shell_cmd())]
+    shell_cmd: String,
 
-    #[arg(short, long, default_value_t = utils::get_cwd_string())]
+    #[arg(short, long, default_value_t = Args::get_default_cwd())]
     cwd: String,
 
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = true)]
     create_dirs: bool,
+}
+
+impl Args {
+    fn get_default_cwd() -> String {
+        match std::env::current_dir() {
+            Ok(path) => path.to_str().unwrap().to_string(),
+            Err(_) => String::from(""),
+        }
+    }
+
+    fn get_default_shell_cmd() -> String {
+        String::from("mv {} {}")
+    }
 }
 
 
 fn main() {
-    let args = Args::parse();
-
-    let cwd = Path::new(&args.cwd);
-    let entries = cwd.read_dir().unwrap()
-        .filter(|entry| entry.as_ref().unwrap().file_type().unwrap().is_file())
-        .map(|entry| OrganizeEntry::new(entry.unwrap().path().to_path_buf()));
-
-    if args.create_dirs {
-        let mut dirs = HashSet::new();
-        for entry in entries {
-            let category = entry.get_category_from_ext();
-            if let Some(category) = category {
-                let dir = cwd.join(category);
-                dirs.insert(dir);
-            }
-        }
-        for dir in dirs {
-            println!("Category Directory: {}", dir.to_str().unwrap());
-            // std::fs::create_dir_all(dir).unwrap();
-        }
-    }
-
-    // if args.shell.is_some() {
-    //     let shell = args.shell.unwrap();
-    // }
+    // let args = Args::parse();
 }
